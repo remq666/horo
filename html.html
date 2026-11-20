@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-[#0b1121] text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Начертательная геометрия — Вариант 16 (МГТУ им. Н.Э. Баумана)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+
+        .mono {
+            font-family: 'JetBrains+Mono', monospace;
+        }
+
+        /* SVG Text Halo Effect for extreme readability */
+        .svg-halo {
+            paint-order: stroke fill;
+            stroke: #ffffff;
+            stroke-width: 3.2px;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+        
+        .svg-halo-dark {
+            paint-order: stroke fill;
+            stroke: #0f172a;
+            stroke-width: 3px;
+            stroke-linejoin: round;
+        }
+
+        /* Hide scrollbars for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Custom toggle button glow */
+        .toggle-active {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
+            color: #34d399;
+        }
+
+        /* Toast animation */
+        @keyframes toastFade {
+            0% { opacity: 0; transform: translate(-50%, 10px); }
+            15% { opacity: 1; transform: translate(-50%, 0); }
+            85% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -10px); }
+        }
+        .animate-toast {
+            animation: toastFade 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-hidden bg-[#0b1121] text-slate-200">
+
+    <!-- View-Only Security Toast -->
+    <div id="toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-full shadow-2xl text-xs sm:text-sm font-medium backdrop-blur-md animate-toast pointer-events-none">
+        🔒 Режим защищённого просмотра: скачивание отключено
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="h-12 sm:h-14 bg-slate-900/80 border-b border-slate-800/80 px-3 sm:px-6 flex items-center justify-between shrink-0 backdrop-blur-md">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+            <span class="bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 text-xs font-bold px-2 py-0.5 rounded-md shrink-0">
+                РК-1 • Вариант 16
+            </span>
+            <h1 class="text-xs sm:text-sm font-semibold truncate text-slate-200">
+                Пересечение полусферы Φ, призмы Ψ и закрытого тора T
+            </h1>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <span id="step-counter" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                Шаг 0 из 21
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace Area -->
+    <main class="relative flex-1 bg-[#0b1121] flex flex-col overflow-hidden p-2 sm:p-4">
+        
+        <!-- SVG Canvas Wrapper -->
+        <div id="svg-container" class="relative flex-1 w-full h-full bg-white rounded-xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing border border-slate-300/30">
+            
+            <!-- SVG Drawing Board -->
+            <svg id="drawing-svg" class="w-full h-full block" preserveAspectRatio="xMidYMid meet">
+                <!-- Dynamic Content injected via JS -->
+            </svg>
+
+            <!-- Floating Viewport Controls (Top-Right) -->
+            <div class="absolute top-3 right-3 flex flex-col gap-1.5 z-10 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-slate-700/60 shadow-lg">
+                <button id="btn-zoom-in" title="Приблизить" class="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded font-bold text-lg transition-colors">
+                    +
+                </button>
+                <button id="btn-zoom-out" title="Отдалить" class="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded font-bold text-lg transition-colors">
+                    −
+                </button>
+                <button id="btn-zoom-reset" title="Сбросить вид" class="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded font-semibold text-xs transition-colors">
+                    ↺
+                </button>
+            </div>
+
+            <!-- Floating Visibility Toggles (Top-Left) -->
+            <div class="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 max-w-[calc(100%-4rem)]">
+                <button id="toggle-past" class="px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-emerald-500/50 text-emerald-400">
+                    <span id="dot-past" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    Прошлые
+                </button>
+                <button id="toggle-compass" class="px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-indigo-500/50 text-indigo-300">
+                    ⌖ Циркуль
+                </button>
+                <button id="toggle-labels" class="px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-indigo-500/50 text-indigo-300">
+                    Абв Подписи
+                </button>
+            </div>
+
+            <!-- Viewport Hint Overlay -->
+            <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] text-slate-400/80 font-mono bg-white/80 px-2 py-0.5 rounded shadow-sm border border-slate-200">
+                1 мм = 1 unit • Π₂ (z>0) / Π₁ (y>0)
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Control Panel & Step Navigator -->
+    <footer class="bg-slate-900/90 border-t border-slate-800 px-3 py-2.5 sm:px-6 sm:py-3.5 flex flex-col gap-2.5 shrink-0 backdrop-blur-md">
+        
+        <!-- Step Selector Strip -->
+        <div id="step-strip" class="flex gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 scroll-smooth">
+            <!-- Buttons 0 to 21 generated dynamically in JS -->
+        </div>
+
+        <!-- Step Description Card -->
+        <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+            <div class="flex flex-col gap-1 min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                    <span id="step-stage-tag" class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        Этап 1: Дано
+                    </span>
+                    <h2 id="step-title" class="text-xs sm:text-sm font-semibold text-slate-100 truncate">
+                        Исходные данные задачи
+                    </h2>
+                </div>
+                <p id="step-desc" class="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    Начертите полусферу, призму и closed torus (лимон) по заданной системе координат.
+                </p>
+            </div>
+
+            <!-- Step Navigation Action Buttons -->
+            <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                <button id="btn-prev" class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-slate-200 text-xs font-semibold border border-slate-700 transition-colors flex items-center justify-center gap-1.5">
+                    ← Назад
+                </button>
+                <button id="btn-next" class="flex-1 sm:flex-initial px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-30 disabled:pointer-events-none text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-1.5">
+                    Дальше →
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Application Logic Javascript -->
+    <script>
+    (function() {
+        'use strict';
+
+        // Security / View-Only Controls
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('hidden');
+            // Re-trigger animation
+            toast.classList.remove('animate-toast');
+            void toast.offsetWidth;
+            toast.classList.add('animate-toast');
+        }
+
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); showToast(); });
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'S', 'P', 'U'].includes(e.key)) {
+                e.preventDefault();
+                showToast();
+            }
+            if (e.key === 'F12') {
+                e.preventDefault();
+                showToast();
+            }
+        });
+
+        // -------------------------------------------------------------
+        // 1. EXACT 3D GEOMETRY MATH ENGINE (Variant 16)
+        // -------------------------------------------------------------
+        
+        // Unified Projection Transfrom to SVG coordinates
+        // 1 SVG unit = 1 mm.
+        // Base line z=0 is at SVG Y = 0.
+        // +X is LEFT, -X is RIGHT in Monge, so SVG X = -x.
+        // +Z is UP on Π2, so SVG Y = -z.
+        // Horizontal sphere axis y=0 is at SVG Y = 100 on Π1 (100 mm axis spacing).
+        // +Y is DOWN on Π1, so SVG Y = 100 + y.
+        function p2(x, z) {
+            return { X: -x, Y: -z };
+        }
+        function p1(x, y) {
+            return { X: -x, Y: 100 + y };
+        }
+
+        // Geometry Constants
+        const R_S = 75; // Sphere radius (Ø150)
+        
+        // Prism Ψ parameters (Dп = 70 => R_p = 35, center = (35, 40))
+        const Rp = 35;
+        const Xp = 35;
+        const Yp = 40;
+        const A_3D = { x: Xp + Rp * Math.sqrt(3)/2, y: Yp - 17.5 }; // (65.310889, 22.5)
+        const B_3D = { x: Xp - Rp * Math.sqrt(3)/2, y: Yp - 17.5 }; // (4.689111, 22.5)
+        const C_3D = { x: Xp, y: Yp + 35 };                       // (35, 75)
+        
+        function zSphere(x, y) {
+            const r2 = x*x + y*y;
+            return r2 >= R_S*R_S ? 0 : Math.sqrt(R_S*R_S - r2);
+        }
+
+        // Prism A & B heights on sphere
+        A_3D.z = zSphere(A_3D.x, A_3D.y); // 29.2102
+        B_3D.z = zSphere(B_3D.x, B_3D.y); // 71.3916
+
+        // Prism exit points on base z=0
+        // Line AC: unit normal nAC = (sqrt(3)/2, 0.5), dAC = 67.810889
+        const nAC = { x: Math.sqrt(3)/2, y: 0.5 };
+        const dAC = nAC.x * A_3D.x + nAC.y * A_3D.y; // 67.810889
+        const E_3D = {
+            x: dAC * nAC.x, // 58.72595
+            y: dAC * nAC.y, // 33.90544
+            z: Math.sqrt(R_S*R_S - dAC*dAC) // 32.04190
+        };
+
+        const uAC = { x: -0.5, y: Math.sqrt(3)/2 };
+        const s1 = Math.sqrt(R_S*R_S - dAC*dAC);
+        const K1_3D = {
+            x: E_3D.x + s1 * uAC.x, // 42.70500
+            y: E_3D.y + s1 * uAC.y, // 61.65454
+            z: 0
+        };
+
+        // Line BC: unit normal nBC = (-sqrt(3)/2, 0.5)
+        const nBC = { x: -Math.sqrt(3)/2, y: 0.5 };
+        const dBC = nBC.x * B_3D.x + nBC.y * B_3D.y; // 7.189111
+        const E_BC = { x: dBC * nBC.x, y: dBC * nBC.y };
+        const uBC = { x: 0.5, y: Math.sqrt(3)/2 };
+        const s2 = Math.sqrt(R_S*R_S - dBC*dBC);
+        const K2_3D = {
+            x: E_BC.x + s2 * uBC.x, // 31.10137
+            y: E_BC.y + s2 * uBC.y, // 68.24738
+            z: 0
+        };
+
+        // Intermediate prism points
+        function pointOnLineAtY(P1, P2, y) {
+            const t = (y - P1.y) / (P2.y - P1.y);
+            const x = P1.x + t * (P2.x - P1.x);
+            return { x, y, z: zSphere(x, y) };
+        }
+
+        const M1_3D = pointOnLineAtY(A_3D, C_3D, 43);
+        const N1_3D = pointOnLineAtY(B_3D, C_3D, 43);
+        const M2_3D = pointOnLineAtY(A_3D, C_3D, 53);
+        const N2_3D = pointOnLineAtY(B_3D, C_3D, 53);
+        const N3_3D = pointOnLineAtY(B_3D, C_3D, 62);
+
+        // Closed Torus T parameters
+        const xT = -40;
+        const zT = 45;
+        const yT = -30;
+        const r_eq = 40;
+        const R_T = 60;
+        const D_centers = Math.hypot(xT, zT); // 60.207973
+        const ex = xT / D_centers;
+        const ez = zT / D_centers;
+        const nx = zT / D_centers; // Perpendicular vector (up-left)
+        const nz = -xT / D_centers;
+
+        function rT(y) {
+            const dy = y - yT;
+            const val = R_T*R_T - dy*dy;
+            return val < 0 ? 0 : Math.sqrt(val) - (R_T - r_eq);
+        }
+
+        function RS(y) {
+            const val = R_S*R_S - y*y;
+            return val < 0 ? 0 : Math.sqrt(val);
+        }
+
+        // Torus ∩ Sphere analytical solver for any frontal plane y
+        function solveTorusSphereIntersection(y) {
+            const r1 = RS(y);
+            const r2 = rT(y);
+            if (r1 <= 0 || r2 <= 0) return null;
+            const a = (D_centers*D_centers + r1*r1 - r2*r2) / (2 * D_centers);
+            const h2 = r1*r1 - a*a;
+            if (h2 < 0) return null;
+            const h = Math.sqrt(h2);
+
+            // Upper/Left Branch U (+h)
+            const U = {
+                x: a * ex + h * nx,
+                y: y,
+                z: a * ez + h * nz
+            };
+            // Lower/Right Branch L (-h)
+            const L = {
+                x: a * ex - h * nx,
+                y: y,
+                z: a * ez - h * nz
+            };
+            return { U, L };
+        }
+
+        // Bisection for exact Apogee y1 (RS + rT = D_centers)
+        function findApogeeY() {
+            let low = -70, high = -60;
+            for (let i = 0; i < 80; i++) {
+                const mid = (low + high) / 2;
+                if (RS(mid) + rT(mid) - D_centers > 0) low = mid;
+                else high = mid;
+            }
+            return (low + high) / 2;
+        }
+
+        // Bisection for exact Perigee y2 (RS - rT = D_centers)
+        function findPerigeeY() {
+            let low = 15, high = 25;
+            for (let i = 0; i < 80; i++) {
+                const mid = (low + high) / 2;
+                if (RS(mid) - rT(mid) - D_centers > 0) high = mid;
+                else low = mid;
+            }
+            return (low + high) / 2;
+        }
+
+        const y1_apogee = findApogeeY(); // ~ -67.2606
+        const y2_perigee = findPerigeeY(); // ~ +20.8594
+        const P1_3D = solveTorusSphereIntersection(y1_apogee).U; // Apogee (U & L merge)
+        const P2_3D = solveTorusSphereIntersection(y2_perigee).U; // Perigee (U & L merge)
+
+        // Key Points 3 to 18
+        const P3_4 = solveTorusSphereIntersection(0);
+        const P3_3D = P3_4.U; // (y=0, Π2 visibility node)
+        const P4_3D = P3_4.L;
+
+        const P5_6 = solveTorusSphereIntersection(-30);
+        const P5_3D = P5_6.U; // (y=-30, torus equator)
+        const P6_3D = P5_6.L;
+
+        // Point 7 & 8 at z = 45 (Π1 visibility node)
+        // At z=45, sphere section is circle of radius sqrt(75^2 - 45^2) = 60 centered at O'(0,0).
+        // Torus lemon outline on Π1 is formed by circles C_L(-60,-30) R=60 and C_R(-20,-30) R=60.
+        // Intersections:
+        // P7': circle O'(0,0) R=60 & circle C_L(-60,-30) R=60 -> y = -59.4972, x = -7.7514
+        // P8': circle O'(0,0) R=60 & circle C_R(-20,-30) R=60 -> y = +16.7442, x = -57.6163
+        const P7_3D = solveTorusSphereIntersection(-59.4972).U;
+        const P8_3D = solveTorusSphereIntersection(16.7442).L;
+
+        // Intermediate frontal planes
+        const P9_10 = solveTorusSphereIntersection(12);
+        const P11_12 = solveTorusSphereIntersection(-15);
+        const P13_14 = solveTorusSphereIntersection(-45);
+        const P15_16 = solveTorusSphereIntersection(-55);
+        const P17_18 = solveTorusSphereIntersection(-63);
+
+        // Continuous Closed Loop Parameterization for Φ ∩ T
+        const yMid = 0.5 * (y1_apogee + y2_perigee);
+        const yHalf = 0.5 * (y2_perigee - y1_apogee);
+
+        function getPointOnTorusSphereLoop(theta) {
+            // theta in [0, 2*Math.PI]
+            // theta = 0 -> y2_perigee
+            // theta = Math.PI -> y1_apogee
+            const y = yMid + yHalf * Math.cos(theta);
+            const sol = solveTorusSphereIntersection(y);
+            if (!sol) return P1_3D;
+            return (theta <= Math.PI) ? sol.U : sol.L;
+        }
+
+        // Calculate exact theta split values for visibility
+        const theta3 = Math.acos((0 - yMid) / yHalf); // y=0 on Branch U
+        const theta4 = 2 * Math.PI - theta3;           // y=0 on Branch L
+
+        const theta7 = Math.acos((P7_3D.y - yMid) / yHalf); // z=45 on Branch U
+        const theta8 = 2 * Math.PI - Math.acos((P8_3D.y - yMid) / yHalf); // z=45 on Branch L
+
+        // Helper to sample a segment of the continuous loop between thetaStart and thetaEnd
+        function sampleLoopArc(tStart, tEnd, steps = 60) {
+            const points = [];
+            let len = tEnd - tStart;
+            if (len < 0) len += 2 * Math.PI;
+            for (let i = 0; i <= steps; i++) {
+                const t = (tStart + (len * i) / steps) % (2 * Math.PI);
+                points.push(getPointOnTorusSphereLoop(t));
+            }
+            return points;
+        }
+
+        // Self-Verification assertions in JS console
+        console.assert(Math.abs(Math.hypot(P1_3D.x, P1_3D.y, P1_3D.z) - 75) < 0.01, "Apogee 1 on sphere");
+        console.assert(Math.abs(Math.hypot(P2_3D.x, P2_3D.y, P2_3D.z) - 75) < 0.01, "Perigee 2 on sphere");
+        console.assert(Math.abs(P7_3D.z - 45) < 0.05, "P7 at z=45");
+        console.assert(Math.abs(P8_3D.z - 45) < 0.05, "P8 at z=45");
+
+        // -------------------------------------------------------------
+        // 2. STATE MANAGEMENT & VIEWPORT PAN/ZOOM
+        // -------------------------------------------------------------
+
+        let currentStep = 0;
+        let showPast = true;
+        let showCompass = true;
+        let showLabels = true;
+
+        // Viewport Transform State
+        let viewBox = { x: -126, y: -112, w: 256, h: 308 };
+        const initialViewBox = { x: -126, y: -112, w: 256, h: 308 };
+        let isDragging = false;
+        let startPan = { x: 0, y: 0 };
+        let touchStartDist = 0;
+
+        const svgEl = document.getElementById('drawing-svg');
+        const containerEl = document.getElementById('svg-container');
+
+        function updateSvgViewBox() {
+            svgEl.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+        }
+        updateSvgViewBox();
+
+        // Pan and Zoom Event Listeners
+        function applyZoom(factor, centerX, centerY) {
+            const svgRect = svgEl.getBoundingClientRect();
+            const relX = (centerX - svgRect.left) / svgRect.width;
+            const relY = (centerY - svgRect.top) / svgRect.height;
+
+            const mouseSvgX = viewBox.x + relX * viewBox.w;
+            const mouseSvgY = viewBox.y + relY * viewBox.h;
+
+            const newW = Math.max(80, Math.min(500, viewBox.w * factor));
+            const newH = Math.max(96, Math.min(600, viewBox.h * factor));
+
+            viewBox.x = mouseSvgX - relX * newW;
+            viewBox.y = mouseSvgY - relY * newH;
+            viewBox.w = newW;
+            viewBox.h = newH;
+            updateSvgViewBox();
+        }
+
+        document.getElementById('btn-zoom-in').onclick = () => {
+            const rect = svgEl.getBoundingClientRect();
+            applyZoom(0.8, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        };
+        document.getElementById('btn-zoom-out').onclick = () => {
+            const rect = svgEl.getBoundingClientRect();
+            applyZoom(1.25, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        };
+        document.getElementById('btn-zoom-reset').onclick = () => {
+            viewBox = { ...initialViewBox };
+            updateSvgViewBox();
+        };
+
+        // Pointer / Touch Events
+        containerEl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const factor = e.deltaY > 0 ? 1.1 : 0.9;
+            applyZoom(factor, e.clientX, e.clientY);
+        }, { passive: false });
+
+        containerEl.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isDragging = true;
+            startPan = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = (e.clientX - startPan.x) * (viewBox.w / svgEl.clientWidth);
+            const dy = (e.clientY - startPan.y) * (viewBox.h / svgEl.clientHeight);
+            viewBox.x -= dx;
+            viewBox.y -= dy;
+            startPan = { x: e.clientX, y: e.clientY };
+            updateSvgViewBox();
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        // Touch gesture isolation
+        containerEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startPan = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                touchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: false });
+
+        containerEl.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isDragging && e.touches.length === 1) {
+                const dx = (e.touches[0].clientX - startPan.x) * (viewBox.w / svgEl.clientWidth);
+                const dy = (e.touches[0].clientY - startPan.y) * (viewBox.h / svgEl.clientHeight);
+                viewBox.x -= dx;
+                viewBox.y -= dy;
+                startPan = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                updateSvgViewBox();
+            } else if (e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                if (touchStartDist > 0) {
+                    const factor = touchStartDist / dist;
+                    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    applyZoom(factor, midX, midY);
+                    touchStartDist = dist;
+                }
+            }
+        }, { passive: false });
+
+        containerEl.addEventListener('touchend', () => {
+            isDragging = false;
+            touchStartDist = 0;
+        });
+
+        // -------------------------------------------------------------
+        // 3. STEP DEFINITIONS & DESCRIPTIONS
+        // -------------------------------------------------------------
+
+        const STEPS = [
+            { stage: "Этап 1: Дано", title: "Исходные условия задачи (Вариант 16)", desc: "Полусфера R=75, призма Dп=70 (H=95), closed torus R=60, r_eq=40 (ось z=45, y=-30). Чертеж в проекциях Monge." },
+            { stage: "Этап 2: Призма", title: "Точки K₁ и K₂ на основании z=0", desc: "На Π₁ ребра A'C' и B'C' пересекают экватор сферы в K₁' и K₂'. По линиям связи находим K₁'' и K₂'' на оси x." },
+            { stage: "Этап 2: Призма", title: "Плоскость грани AB (y=22.5) → A, B", desc: "Задаем плоскость Σ_AB. Окружность сечения сферы R=71.55 мм дает точки A и B на вертикальных ребрах призмы." },
+            { stage: "Этап 2: Призма", title: "Экстремум E на грани AC", desc: "Проводим перпендикуляр O'E' ⊥ A'C' (d=67.81 мм). Сечение сферой R=32.04 мм определяет наивысшую точку E''." },
+            { stage: "Этап 2: Призма", title: "Плоскость Σ_P1 (y=43) → M₁, N₁", desc: "Проводим фронтальную плоскость Σ_P1. Окружность R=61.45 мм на Π₂ пересекает ребра в точках M₁ и N₁." },
+            { stage: "Этап 2: Призма", title: "Плоскость Σ_P2 (y=53) → M₂, N₂", desc: "Фронтальная плоскость Σ_P2 дает окружность R=53.07 мм и промежуточные точки M₂ (грань AC) и N₂ (грань BC)." },
+            { stage: "Этап 2: Призма", title: "Плоскость Σ_P3 (y=62) → N₃", desc: "Плоскость Σ_P3 пересекает только грань BC (AC вышло на z=0). Окружность R=42.20 мм дает точку N₃." },
+            { stage: "Этап 2: Призма", title: "Линия пересечения Φ ∩ Ψ + Видимость", desc: "Соединяем K₁-E-A (видимая), A-B (невидимая на задней грани) и B-K₂ (видимая) плавной кривой." },
+            { stage: "Этап 3: Тора-Апогей", title: "Вращение оси тора (Метод вращения)", desc: "Поворачиваем ось тора вокруг оси сферы O до фронтального положения Ō''. Горизонтальная плоскость δ₂ (z=45)." },
+            { stage: "Этап 3: Тора-Апогей", title: "Повернутые точки 1̄' и 2̄'", desc: "На Π₁ строим сферу R=75 с центром Ō'. Пересечение с очерком тора («лимоном») дает повернутые точки 1̄' и 2̄'." },
+            { stage: "Этап 3: Тора-Апогей", title: "Обратный поворот → Апогей 1 и Перигей 2", desc: "Проецируем на z=45 и поворачиваем дугами назад на плоскость симметрии φ₂. Находим высшую (1) и низшую (2) точки!" },
+            { stage: "Этап 3: Тора-Очерк", title: "Плоскость Σ₁ (y=0) → 3, 4 (Граница Π₂)", desc: "Очерк сферы на Π₂. Пересечение окружностей сферы R=75 и тора r_T=31.96 мм дает точки 3 и 4 (смена видимости на Π₂)." },
+            { stage: "Этап 3: Тора-Очерк", title: "Плоскость Σ₂ (y=-30) → 5, 6 (Экватор тора)", desc: "Фронтальная плоскость через экватор тора Ø80. Окружности сферы R=68.74 мм и тора r_T=40 мм дают точки 5 и 6." },
+            { stage: "Этап 3: Тора-Очерк", title: "Плоскость Γ (z=45) → 7, 8 (Граница Π₁)", desc: "Горизонтальный очерк тора на Π₁. Окружность сферы R=60 мм пересекает очерк тора в точках 7 и 8 (граница видимости Π₁)." },
+            { stage: "Этап 3: Тора-Сечения", title: "Промежуточная плоскость Σ₃ (y=+12)", desc: "Сечение сферы (R=74.03) и тора (r_T=22.85) дает точки 9 (Верх) и 10 (Низ) в передней полупространстве." },
+            { stage: "Этап 3: Тора-Сечения", title: "Промежуточная плоскость Σ₄ (y=-15)", desc: "Сечение сферы (R=73.48) и тора (r_T=38.09) дает промежуточные точки 11 и 12." },
+            { stage: "Этап 3: Тора-Сечения", title: "Промежуточная плоскость Σ₅ (y=-45)", desc: "Сечение сферы (R=60.00) и тора (r_T=38.09) дает промежуточные точки 13 и 14." },
+            { stage: "Этап 3: Тора-Сечения", title: "Промежуточная плоскость Σ₆ (y=-55)", desc: "Сечение сферы (R=50.99) и тора (r_T=34.54) дает промежуточные точки 15 и 16." },
+            { stage: "Этап 3: Тора-Сечения", title: "Промежуточная плоскость Σ₇ (y=-63)", desc: "Сечение сферы (R=40.69) и тора (r_T=30.11) дает промежуточные точки 17 и 18 близ апогея." },
+            { stage: "Этап 3: Тора-Кривая", title: "Линия пересечения Φ ∩ T на Π₂", desc: "Соединяем опорные точки на Π₂: сплошная дуга 3-2-8-4 (y≥0) и штриховая дуга 4-6-1-7-5-3 (y≤0)." },
+            { stage: "Этап 3: Тора-Кривая", title: "Линия пересечения Φ ∩ T на Π₁", desc: "Соединяем опорные точки на Π₁: сплошная дуга 7-5-3-2-8 (z≥45) и штриховая дуга 8-4-6-1-7 (z≤45)." },
+            { stage: "Финал: ГОСТ 2.303", title: "Полный итоговый чертеж по ГОСТ 2.303-68", desc: "Окончательная обводка всех геометрических тел с учетом видимости, вырезов и линий пересечения." }
+        ];
+
+        // UI Toggle Elements
+        const togglePastBtn = document.getElementById('toggle-past');
+        const dotPast = document.getElementById('dot-past');
+        const toggleCompassBtn = document.getElementById('toggle-compass');
+        const toggleLabelsBtn = document.getElementById('toggle-labels');
+
+        function updateToggleStyles() {
+            if (showPast) {
+                togglePastBtn.className = "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-emerald-500/50 text-emerald-400";
+                dotPast.className = "w-2 h-2 rounded-full bg-emerald-400";
+            } else {
+                togglePastBtn.className = "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-slate-700 text-slate-400 opacity-70";
+                dotPast.className = "w-2 h-2 rounded-full bg-slate-500";
+            }
+
+            toggleCompassBtn.className = showCompass 
+                ? "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-indigo-500/50 text-indigo-300"
+                : "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-slate-700 text-slate-400 opacity-70";
+
+            toggleLabelsBtn.className = showLabels 
+                ? "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-indigo-500/50 text-indigo-300"
+                : "px-2.5 py-1 rounded-lg border text-xs font-medium backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md bg-slate-900/80 border-slate-700 text-slate-400 opacity-70";
+        }
+
+        togglePastBtn.onclick = () => { showPast = !showPast; updateToggleStyles(); render(); };
+        toggleCompassBtn.onclick = () => { showCompass = !showCompass; updateToggleStyles(); render(); };
+        toggleLabelsBtn.onclick = () => { showLabels = !showLabels; updateToggleStyles(); render(); };
+
+        // -------------------------------------------------------------
+        // 4. RENDERING ENGINE & SVG GENERATOR
+        // -------------------------------------------------------------
+
+        function renderPoint(pt3D, label, options = {}) {
+            const { isCurrent = false, isPast = false, color = '#e11d48', radius = 2.2, labelOffset = { dx: 4, dy: -4 } } = options;
+            
+            if (isPast && !showPast) return ''; // STRICT CHECK FOR PAST TOGGLE
+
+            const pt2 = p2(pt3D.x, pt3D.z);
+            const pt1 = p1(pt3D.x, pt3D.y);
+
+            const dotColor = isCurrent ? '#ef4444' : (isPast ? '#3b82f6' : color);
+            const opacity = isPast ? 0.5 : 1.0;
+            const r = isCurrent ? 2.8 : radius;
+
+            let html = '';
+
+            // Projection connection line between Π2 and Π1
+            if (options.showProjLine) {
+                html += `<line x1="${pt2.X}" y1="${pt2.Y}" x2="${pt1.X}" y2="${pt1.Y}" stroke="${isCurrent ? '#f59e0b' : '#cbd5e1'}" stroke-width="${isCurrent ? 0.9 : 0.5}" stroke-dasharray="2 2" opacity="${opacity}"/>`;
+            }
+
+            // Dot on Π2
+            html += `<circle cx="${pt2.X}" cy="${pt2.Y}" r="${r}" fill="${dotColor}" opacity="${opacity}"/>`;
+            if (showLabels && label) {
+                html += `<text x="${pt2.X + labelOffset.dx}" y="${pt2.Y + labelOffset.dy}" font-size="7.5" font-weight="700" fill="${isPast ? '#1e40af' : '#0f172a'}" class="svg-halo" opacity="${opacity}">${label}''</text>`;
+            }
+
+            // Dot on Π1
+            html += `<circle cx="${pt1.X}" cy="${pt1.Y}" r="${r}" fill="${dotColor}" opacity="${opacity}"/>`;
+            if (showLabels && label) {
+                html += `<text x="${pt1.X + labelOffset.dx}" y="${pt1.Y + labelOffset.dy + 7}" font-size="7.5" font-weight="700" fill="${isPast ? '#1e40af' : '#0f172a'}" class="svg-halo" opacity="${opacity}">${label}'</text>`;
+            }
+
+            return html;
+        }
+
+        // Generate Torus Lemon Outline on Π1 (Dense sampling guarantees zero SVG inversion bugs)
+        function generateTorusLemonSvgPath() {
+            const topPt = p1(-40, -30 - 40 * Math.sqrt(2));
+            const botPt = p1(-40, -30 + 40 * Math.sqrt(2));
+            
+            // Left arc (passing through x=0 at y=-30)
+            let pathLeft = `M ${topPt.X} ${topPt.Y}`;
+            const steps = 60;
+            for (let i = 0; i <= steps; i++) {
+                const y = (-30 - 40 * Math.sqrt(2)) + (80 * Math.sqrt(2) * i) / steps;
+                const pt = p1(-40 + rT(y), y);
+                pathLeft += ` L ${pt.X} ${pt.Y}`;
+            }
+
+            // Right arc (passing through x=-80 at y=-30)
+            let pathRight = `M ${topPt.X} ${topPt.Y}`;
+            for (let i = 0; i <= steps; i++) {
+                const y = (-30 - 40 * Math.sqrt(2)) + (80 * Math.sqrt(2) * i) / steps;
+                const pt = p1(-40 - rT(y), y);
+                pathRight += ` L ${pt.X} ${pt.Y}`;
+            }
+
+            return { pathLeft, pathRight, topPt, botPt };
+        }
+
+        function renderBaseGeometry(step) {
+            let svg = '';
+
+            // Base ground line z=0 (Axis x)
+            svg += `<line x1="-125" y1="0" x2="125" y2="0" stroke="#0f172a" stroke-width="1.2"/>`;
+            svg += `<text x="-120" y="-4" font-size="9" font-weight="700" fill="#0f172a" class="svg-halo">x</text>`;
+            svg += `<text x="110" y="-4" font-size="8" font-weight="600" fill="#64748b" class="svg-halo">Π₂ (z>0)</text>`;
+            svg += `<text x="110" y="12" font-size="8" font-weight="600" fill="#64748b" class="svg-halo">Π₁ (y>0)</text>`;
+
+            // Center symmetry axes (Dash-Dot)
+            // Sphere O(0,0)
+            const O2 = p2(0,0);
+            const O1 = p1(0,0);
+            svg += `<line x1="0" y1="-85" x2="0" y2="185" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="8 3 2 3"/>`;
+            svg += `<line x1="-85" y1="0" x2="85" y2="0" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="8 3 2 3"/>`;
+            svg += `<line x1="-85" y1="100" x2="85" y2="100" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="8 3 2 3"/>`;
+            svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="1.5" fill="#475569"/>`;
+            svg += `<circle cx="${O1.X}" cy="${O1.Y}" r="1.5" fill="#475569"/>`;
+            if (showLabels) {
+                svg += `<text x="-6" y="-4" font-size="8" font-weight="700" fill="#475569" class="svg-halo">O''</text>`;
+                svg += `<text x="-6" y="108" font-size="8" font-weight="700" fill="#475569" class="svg-halo">O'</text>`;
+            }
+
+            // Prism center axis O_p(35, 40)
+            const Op1 = p1(Xp, Yp);
+            svg += `<line x1="${Op1.X}" y1="0" x2="${Op1.X}" y2="95" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="6 3"/>`;
+            svg += `<line x1="${Op1.X - 42}" y1="${Op1.Y}" x2="${Op1.X + 42}" y2="${Op1.Y}" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="6 3"/>`;
+
+            // Torus center axis i_T (-40, 45)
+            const OT2 = p2(xT, zT);
+            const OT1 = p1(xT, yT);
+            svg += `<line x1="${OT2.X}" y1="-90" x2="${OT2.X}" y2="175" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="6 3"/>`;
+            svg += `<line x1="${OT2.X - 45}" y1="${OT2.Y}" x2="${OT2.X + 45}" y2="${OT2.Y}" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="6 3"/>`;
+            svg += `<line x1="${OT1.X - 45}" y1="${OT1.Y}" x2="${OT1.X + 45}" y2="${OT1.Y}" stroke="#94a3b8" stroke-width="0.6" stroke-dasharray="6 3"/>`;
+
+            // GOST Outlines (Step 21 has bold outlines with exact visibility cutouts)
+            const isFinal = (step === 21);
+            const strokeColor = isFinal ? '#0f172a' : '#64748b';
+            const strokeWidth = isFinal ? 1.8 : 0.9;
+
+            // 1) Hemisphere Φ
+            // On Π2: upper semicircle R=75 + base segment z=0
+            if (isFinal) {
+                // Trimming on Π2 for Final:
+                // Solid: (75,0) to A.x; B.x to Point 3; Point 4 to (-75,0)
+                const ptA2 = p2(A_3D.x, A_3D.z);
+                const ptB2 = p2(B_3D.x, B_3D.z);
+                const pt32 = p2(P3_3D.x, P3_3D.z);
+                const pt42 = p2(P4_3D.x, P4_3D.z);
+
+                svg += `<path d="M -75 0 A 75 75 0 0 0 ${pt42.X} ${pt42.Y}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                svg += `<path d="M ${pt32.X} ${pt32.Y} A 75 75 0 0 0 ${ptB2.X} ${ptB2.Y}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                // Hidden under prism (dashed)
+                svg += `<path d="M ${ptB2.X} ${ptB2.Y} A 75 75 0 0 0 ${ptA2.X} ${ptA2.Y}" fill="none" stroke="${strokeColor}" stroke-width="1.0" stroke-dasharray="3 2"/>`;
+                svg += `<path d="M ${ptA2.X} ${ptA2.Y} A 75 75 0 0 0 75 0" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                svg += `<line x1="-75" y1="0" x2="75" y2="0" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            } else {
+                svg += `<path d="M -75 0 A 75 75 0 0 0 75 0 Z" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            }
+
+            // On Π1: circle R=75
+            if (isFinal) {
+                // Equator trimmed by prism (K1..K2) and hidden under torus
+                const ptK1 = p1(K1_3D.x, K1_3D.y);
+                const ptK2 = p1(K2_3D.x, K2_3D.y);
+                svg += `<path d="M ${p1(75,0).X} ${p1(75,0).Y} A 75 75 0 1 0 ${ptK1.X} ${ptK1.Y}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                svg += `<path d="M ${ptK2.X} ${ptK2.Y} A 75 75 0 0 0 ${p1(75,0).X} ${p1(75,0).Y}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            } else {
+                svg += `<circle cx="${O1.X}" cy="${O1.Y}" r="75" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            }
+
+            // 2) Regular Triangular Prism Ψ
+            const A1 = p1(A_3D.x, A_3D.y);
+            const B1 = p1(B_3D.x, B_3D.y);
+            const C1 = p1(C_3D.x, C_3D.y);
+
+            // On Π1: triangle A'-B'-C' (always solid as z=95 top face is visible)
+            svg += `<polygon points="${A1.X},${A1.Y} ${B1.X},${B1.Y} ${C1.X},${C1.Y}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            if (step === 0 && showCompass) {
+                // Circumscribed auxiliary circle Dп = 70
+                svg += `<circle cx="${Op1.X}" cy="${Op1.Y}" r="${Rp}" fill="none" stroke="#94a3b8" stroke-width="0.5" stroke-dasharray="3 3"/>`;
+            }
+
+            // On Π2: rectangle A.x to B.x, z=0..95 + edge C
+            const A2_top = p2(A_3D.x, 95);
+            const B2_top = p2(B_3D.x, 95);
+            const C2_top = p2(C_3D.x, 95);
+            const C2_bot = p2(C_3D.x, 0);
+
+            svg += `<line x1="${A2_top.X}" y1="${A2_top.Y}" x2="${B2_top.X}" y2="${B2_top.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            svg += `<line x1="${C2_top.X}" y1="${C2_top.Y}" x2="${C2_bot.X}" y2="${C2_bot.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+
+            if (isFinal) {
+                // Vertical edges trimmed below sphere intersection A and B
+                const A2_sphere = p2(A_3D.x, A_3D.z);
+                const B2_sphere = p2(B_3D.x, B_3D.z);
+                svg += `<line x1="${A2_top.X}" y1="${A2_top.Y}" x2="${A2_sphere.X}" y2="${A2_sphere.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                svg += `<line x1="${B2_top.X}" y1="${B2_top.Y}" x2="${B2_sphere.X}" y2="${B2_sphere.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            } else {
+                const A2_bot = p2(A_3D.x, 0);
+                const B2_bot = p2(B_3D.x, 0);
+                svg += `<line x1="${A2_top.X}" y1="${A2_top.Y}" x2="${A2_bot.X}" y2="${A2_bot.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+                svg += `<line x1="${B2_top.X}" y1="${B2_top.Y}" x2="${B2_bot.X}" y2="${B2_bot.Y}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            }
+
+            // 3) Closed Circular Torus T
+            // On Π2: full circle centered at p2(-40, 45) radius 40
+            if (isFinal) {
+                // Trimmed on Π2: lower portion inside sphere removed between P5 and P6
+                svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="40" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            } else {
+                svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="40" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            }
+
+            // On Π1: LEMON shape (two circular arcs R=60)
+            const lemon = generateTorusLemonSvgPath();
+            svg += `<path d="${lemon.pathLeft}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+            svg += `<path d="${lemon.pathRight}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+
+            // Base Labels on Step 0
+            if (showLabels) {
+                if (step === 0) {
+                    svg += `<text x="${p2(0, 40).X - 12}" y="${p2(0, 40).Y}" font-size="10" font-weight="700" fill="#3b82f6" class="svg-halo">Φ (R75)</text>`;
+                    svg += `<text x="${A1.X + 6}" y="${A1.Y - 4}" font-size="9" font-weight="700" fill="#475569" class="svg-halo">A'</text>`;
+                    svg += `<text x="${B1.X - 12}" y="${B1.Y - 4}" font-size="9" font-weight="700" fill="#475569" class="svg-halo">B'</text>`;
+                    svg += `<text x="${C1.X + 4}" y="${C1.Y + 8}" font-size="9" font-weight="700" fill="#475569" class="svg-halo">C'</text>`;
+                    svg += `<text x="${OT2.X - 8}" y="${OT2.Y - 8}" font-size="9" font-weight="700" fill="#3b82f6" class="svg-halo">T (Ø80)</text>`;
+                }
+            }
+
+            return svg;
+        }
+
+        // Render Completed Intersection Curves for steps > 7 (Φ ∩ Ψ) and > 19/20 (Φ ∩ T)
+        function renderCompletedCurves(step) {
+            let svg = '';
+
+            // 1) Φ ∩ Ψ Curve (Available after Step 7)
+            if (step >= 7) {
+                const k1_2 = p2(K1_3D.x, K1_3D.z);
+                const e_2 = p2(E_3D.x, E_3D.z);
+                const a_2 = p2(A_3D.x, A_3D.z);
+                const b_2 = p2(B_3D.x, B_3D.z);
+                const k2_2 = p2(K2_3D.x, K2_3D.z);
+
+                const k1_1 = p1(K1_3D.x, K1_3D.y);
+                const a_1 = p1(A_3D.x, A_3D.y);
+                const b_1 = p1(B_3D.x, B_3D.y);
+                const k2_1 = p1(K2_3D.x, K2_3D.y);
+
+                const color = (step === 7) ? '#e11d48' : '#be123c';
+                const width = (step === 21) ? 2.2 : 1.6;
+
+                // Π2: K1-E-A (solid visible), A-B (dashed invisible arc), B-K2 (solid visible)
+                svg += `<path d="M ${k1_2.X} ${k1_2.Y} Q ${e_2.X} ${e_2.Y} ${a_2.X} ${a_2.Y}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
+                
+                // Arc A-B on Π2 (dashed behind prism)
+                const rAB = Math.sqrt(R_S*R_S - 22.5*22.5); // 71.5454
+                svg += `<path d="M ${a_2.X} ${a_2.Y} A ${rAB} ${rAB} 0 0 0 ${b_2.X} ${b_2.Y}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="3 2"/>`;
+
+                svg += `<path d="M ${b_2.X} ${b_2.Y} Q ${p2(B_3D.x+10, (B_3D.z+K2_3D.z)/2).X} ${p2(B_3D.x+10, (B_3D.z+K2_3D.z)/2).Y} ${k2_2.X} ${k2_2.Y}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
+
+                // Π1: Solid lines K1'-A', A'-B', B'-K2'
+                svg += `<line x1="${k1_1.X}" y1="${k1_1.Y}" x2="${a_1.X}" y2="${a_1.Y}" stroke="${color}" stroke-width="${width}"/>`;
+                svg += `<line x1="${a_1.X}" y1="${a_1.Y}" x2="${b_1.X}" y2="${b_1.Y}" stroke="${color}" stroke-width="${width}"/>`;
+                svg += `<line x1="${b_1.X}" y1="${b_1.Y}" x2="${k2_1.X}" y2="${k2_1.Y}" stroke="${color}" stroke-width="${width}"/>`;
+            }
+
+            // 2) Φ ∩ T Curve (Available after Step 19/20)
+            if (step >= 19) {
+                const width = (step === 21) ? 2.2 : 1.6;
+                const color = '#be123c';
+
+                // On Π2:
+                // Solid: theta4 -> 2*PI -> theta3 (y >= 0)
+                const pts2_solid = sampleLoopArc(theta4, theta3, 80).map(p => p2(p.x, p.z));
+                let path2_solid = `M ${pts2_solid[0].X} ${pts2_solid[0].Y}`;
+                for (let i = 1; i < pts2_solid.length; i++) path2_solid += ` L ${pts2_solid[i].X} ${pts2_solid[i].Y}`;
+
+                // Dashed: theta3 -> PI -> theta4 (y <= 0)
+                const pts2_dashed = sampleLoopArc(theta3, theta4, 80).map(p => p2(p.x, p.z));
+                let path2_dashed = `M ${pts2_dashed[0].X} ${pts2_dashed[0].Y}`;
+                for (let i = 1; i < pts2_dashed.length; i++) path2_dashed += ` L ${pts2_dashed[i].X} ${pts2_dashed[i].Y}`;
+
+                svg += `<path d="${path2_solid}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
+                svg += `<path d="${path2_dashed}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="3 2"/>`;
+            }
+
+            if (step >= 20) {
+                const width = (step === 21) ? 2.2 : 1.6;
+                const color = '#be123c';
+
+                // On Π1:
+                // Solid: theta8 -> 2*PI -> theta7 (z >= 45)
+                const pts1_solid = sampleLoopArc(theta8, theta7, 80).map(p => p1(p.x, p.y));
+                let path1_solid = `M ${pts1_solid[0].X} ${pts1_solid[0].Y}`;
+                for (let i = 1; i < pts1_solid.length; i++) path1_solid += ` L ${pts1_solid[i].X} ${pts1_solid[i].Y}`;
+
+                // Dashed: theta7 -> PI -> theta8 (z <= 45)
+                const pts1_dashed = sampleLoopArc(theta7, theta8, 80).map(p => p1(p.x, p.y));
+                let path1_dashed = `M ${pts1_dashed[0].X} ${pts1_dashed[0].Y}`;
+                for (let i = 1; i < pts1_dashed.length; i++) path1_dashed += ` L ${pts1_dashed[i].X} ${pts1_dashed[i].Y}`;
+
+                svg += `<path d="${path1_solid}" fill="none" stroke="${color}" stroke-width="${width}"/>`;
+                svg += `<path d="${path1_dashed}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="3 2"/>`;
+            }
+
+            return svg;
+        }
+
+        // Render Step-Specific Active or Past Construction Graphics
+        function renderStepConstruction(s, isCurrent) {
+            let svg = '';
+            const isPast = !isCurrent;
+
+            if (isPast && !showPast) return ''; // STRICT WORKING TOGGLE
+
+            const colorTrace = isCurrent ? '#f97316' : '#cbd5e1'; // Orange / Faint
+            const colorCircle = isCurrent ? '#2563eb' : '#94a3b8'; // Blue / Faint
+            const colorCompass = isCurrent ? '#8b5cf6' : '#cbd5e1'; // Purple / Faint
+            const strokeW = isCurrent ? 1.0 : 0.5;
+
+            switch (s) {
+                case 1: { // Step 1: K1, K2
+                    svg += renderPoint(K1_3D, "K₁", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -3 } });
+                    svg += renderPoint(K2_3D, "K₂", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -14, dy: -3 } });
+                    break;
+                }
+                case 2: { // Step 2: Plane Σ_AB (y=22.5) -> A, B
+                    const traceY = p1(0, 22.5).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="-120" y="${traceY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Σ_AB</text>`;
+                    
+                    const rAB = Math.sqrt(R_S*R_S - 22.5*22.5); // 71.55 mm
+                    const O2 = p2(0,0);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${rAB}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    if (showCompass) {
+                        svg += `<line x1="0" y1="100" x2="0" y2="${traceY}" stroke="${colorCompass}" stroke-width="1.2"/>`;
+                        svg += `<text x="4" y="${(100+traceY)/2}" font-size="7.5" font-weight="600" fill="#8b5cf6" class="svg-halo">R=71.55</text>`;
+                    }
+
+                    svg += renderPoint(A_3D, "A", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 5, dy: -4 } });
+                    svg += renderPoint(B_3D, "B", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 3: { // Step 3: Extremum E on face AC
+                    const E1 = p1(E_3D.x, E_3D.y);
+                    const O1 = p1(0,0);
+                    svg += `<line x1="${O1.X}" y1="${O1.Y}" x2="${E1.X}" y2="${E1.Y}" stroke="${colorTrace}" stroke-width="${strokeW}"/>`;
+                    if (showCompass) {
+                        // 90° right angle symbol
+                        svg += `<path d="M ${E1.X - 4} ${E1.Y + 2} L ${E1.X - 2} ${E1.Y + 6} L ${E1.X + 2} ${E1.Y + 4}" fill="none" stroke="${colorCompass}" stroke-width="0.9"/>`;
+                    }
+
+                    const traceY = p1(0, E_3D.y).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="-120" y="${traceY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Σ_E</text>`;
+
+                    const rE = E_3D.z; // 32.04 mm
+                    const O2 = p2(0,0);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${rE}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(E_3D, "E", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    break;
+                }
+                case 4: { // Step 4: Σ_P1 (y=43) -> M1, N1
+                    const traceY = p1(0, 43).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="-120" y="${traceY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Σ_P1</text>`;
+
+                    const r = RS(43); // 61.45
+                    const O2 = p2(0,0);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${r}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(M1_3D, "M₁", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -3 } });
+                    svg += renderPoint(N1_3D, "N₁", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -14, dy: -3 } });
+                    break;
+                }
+                case 5: { // Step 5: Σ_P2 (y=53) -> M2, N2
+                    const traceY = p1(0, 53).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const r = RS(53); // 53.07
+                    const O2 = p2(0,0);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${r}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(M2_3D, "M₂", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -3 } });
+                    svg += renderPoint(N2_3D, "N₂", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -14, dy: -3 } });
+                    break;
+                }
+                case 6: { // Step 6: Σ_P3 (y=62) -> N3
+                    const traceY = p1(0, 62).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const r = RS(62); // 42.20
+                    const O2 = p2(0,0);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${r}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(N3_3D, "N₃", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -14, dy: -3 } });
+                    break;
+                }
+                case 8: { // Step 8: Rotation of Torus Axis around O
+                    const OT2 = p2(xT, zT);
+                    const O2 = p2(0,0);
+                    // Symmetry plane trace φ2
+                    svg += `<line x1="0" y1="0" x2="${OT2.X * 1.5}" y2="${OT2.Y * 1.5}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="6 2"/>`;
+                    if (showLabels) svg += `<text x="${OT2.X * 1.3}" y="${OT2.Y * 1.3 - 4}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">φ₂</text>`;
+
+                    // Horizontal plane δ2 (z=45)
+                    const deltaY = p2(0, 45).Y;
+                    svg += `<line x1="-125" y1="${deltaY}" x2="125" y2="${deltaY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="110" y="${deltaY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">δ₂ (z=45)</text>`;
+
+                    // Rotation arc centered at O2 with radius D_centers = 60.21 mm down to axis x
+                    const rotX2 = p2(-D_centers, 0); // Ō'' on axis x
+                    svg += `<path d="M ${OT2.X} ${OT2.Y} A ${D_centers} ${D_centers} 0 0 1 ${rotX2.X} ${rotX2.Y}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    // Vertical projection down to Ō' on Π1
+                    const rotX1 = p1(-D_centers, 0);
+                    svg += `<line x1="${rotX2.X}" y1="${rotX2.Y}" x2="${rotX1.X}" y2="${rotX1.Y}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="2 2"/>`;
+                    
+                    svg += renderPoint({ x: -D_centers, y: 0, z: 0 }, "Ō", { isCurrent, isPast, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 9: { // Step 9: Rotated points 1̄' and 2̄'
+                    const rotX1 = p1(-D_centers, 0);
+                    svg += `<circle cx="${rotX1.X}" cy="${rotX1.Y}" r="75" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    // Intersections with lemon outline on Π1
+                    const p1_bar = p1(-D_centers + rT(y1_apogee), y1_apogee);
+                    const p2_bar = p1(-D_centers - rT(y2_perigee), y2_perigee);
+
+                    svg += `<circle cx="${p1_bar.X}" cy="${p1_bar.Y}" r="2.5" fill="#ef4444"/>`;
+                    svg += `<circle cx="${p2_bar.X}" cy="${p2_bar.Y}" r="2.5" fill="#ef4444"/>`;
+                    if (showLabels) {
+                        svg += `<text x="${p1_bar.X - 14}" y="${p1_bar.Y}" font-size="8" font-weight="700" fill="#be123c" class="svg-halo">1̄'</text>`;
+                        svg += `<text x="${p2_bar.X + 4}" y="${p2_bar.Y}" font-size="8" font-weight="700" fill="#be123c" class="svg-halo">2̄'</text>`;
+                    }
+                    break;
+                }
+                case 10: { // Step 10: Reverse Rotation -> Apogee 1 & Perigee 2
+                    svg += renderPoint(P1_3D, "1", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    svg += renderPoint(P2_3D, "2", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 5, dy: -4 } });
+                    break;
+                }
+                case 11: { // Step 11: Σ1 (y=0) -> 3, 4 (Π2 visibility boundary)
+                    const traceY = p1(0, 0).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="-120" y="${traceY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Σ₁ (y=0)</text>`;
+
+                    const OT2 = p2(xT, zT);
+                    const rT_0 = rT(0); // 31.96 mm
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT_0}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P3_3D, "3", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P4_3D, "4", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 12: { // Step 12: Σ2 (y=-30) -> 5, 6 (Torus equator)
+                    const traceY = p1(0, -30).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="-120" y="${traceY - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Σ₂ (y=-30)</text>`;
+
+                    const O2 = p2(0,0);
+                    const rS_30 = RS(-30); // 68.74 mm
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${rS_30}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P5_3D, "5", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P6_3D, "6", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 13: { // Step 13: Γ (z=45) -> 7, 8 (Π1 visibility boundary)
+                    const traceZ = p2(0, 45).Y;
+                    svg += `<line x1="-125" y1="${traceZ}" x2="125" y2="${traceZ}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    if (showLabels) svg += `<text x="110" y="${traceZ - 3}" font-size="8" font-weight="700" fill="#f97316" class="svg-halo">Γ₂ (z=45)</text>`;
+
+                    const O1 = p1(0,0);
+                    const rS_z45 = Math.sqrt(75*75 - 45*45); // 60 mm
+                    svg += `<circle cx="${O1.X}" cy="${O1.Y}" r="${rS_z45}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P7_3D, "7", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    svg += renderPoint(P8_3D, "8", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 5, dy: -4 } });
+                    break;
+                }
+                case 14: { // Step 14: Σ3 (y=+12) -> 9, 10
+                    const traceY = p1(0, 12).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const O2 = p2(0,0);
+                    const OT2 = p2(xT, zT);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${RS(12)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT(12)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P9_10.U, "9", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P9_10.L, "10", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 15: { // Step 15: Σ4 (y=-15) -> 11, 12
+                    const traceY = p1(0, -15).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const O2 = p2(0,0);
+                    const OT2 = p2(xT, zT);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${RS(-15)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT(-15)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P11_12.U, "11", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P11_12.L, "12", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 16: { // Step 16: Σ5 (y=-45) -> 13, 14
+                    const traceY = p1(0, -45).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const O2 = p2(0,0);
+                    const OT2 = p2(xT, zT);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${RS(-45)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT(-45)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P13_14.U, "13", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P13_14.L, "14", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 17: { // Step 17: Σ6 (y=-55) -> 15, 16
+                    const traceY = p1(0, -55).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const O2 = p2(0,0);
+                    const OT2 = p2(xT, zT);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${RS(-55)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT(-55)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P15_16.U, "15", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P15_16.L, "16", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+                case 18: { // Step 18: Σ7 (y=-63) -> 17, 18
+                    const traceY = p1(0, -63).Y;
+                    svg += `<line x1="-125" y1="${traceY}" x2="125" y2="${traceY}" stroke="${colorTrace}" stroke-width="${strokeW}" stroke-dasharray="4 2"/>`;
+                    const O2 = p2(0,0);
+                    const OT2 = p2(xT, zT);
+                    svg += `<circle cx="${O2.X}" cy="${O2.Y}" r="${RS(-63)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+                    svg += `<circle cx="${OT2.X}" cy="${OT2.Y}" r="${rT(-63)}" fill="none" stroke="${colorCircle}" stroke-width="${strokeW}" stroke-dasharray="3 3"/>`;
+
+                    svg += renderPoint(P17_18.U, "17", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: 4, dy: -4 } });
+                    svg += renderPoint(P17_18.L, "18", { isCurrent, isPast, showProjLine: true, labelOffset: { dx: -12, dy: -4 } });
+                    break;
+                }
+            }
+
+            return svg;
+        }
+
+        // Master Render Function
+        function render() {
+            let svgContent = '';
+
+            // 1. Base Monge Drawing & Geometry Outlines
+            svgContent += renderBaseGeometry(currentStep);
+
+            // 2. Previously completed full intersection curves
+            svgContent += renderCompletedCurves(currentStep);
+
+            // 3. Past steps auxiliary constructions (ONLY if showPast is ON)
+            if (showPast) {
+                for (let s = 1; s < currentStep; s++) {
+                    svgContent += renderStepConstruction(s, false);
+                }
+            }
+
+            // 4. Current step active auxiliary constructions & found points
+            if (currentStep > 0) {
+                svgContent += renderStepConstruction(currentStep, true);
+            }
+
+            svgEl.innerHTML = svgContent;
+
+            // Update UI Labels and Buttons
+            document.getElementById('step-counter').innerText = `Шаг ${currentStep} из 21`;
+            document.getElementById('step-stage-tag').innerText = STEPS[currentStep].stage;
+            document.getElementById('step-title').innerText = STEPS[currentStep].title;
+            document.getElementById('step-desc').innerText = STEPS[currentStep].desc;
+
+            document.getElementById('btn-prev').disabled = (currentStep === 0);
+            document.getElementById('btn-next').disabled = (currentStep === 21);
+
+            // Highlight Active Button in Step Strip & Auto-Scroll
+            const stripButtons = document.querySelectorAll('.step-strip-btn');
+            stripButtons.forEach((btn, idx) => {
+                if (idx === currentStep) {
+                    btn.className = "step-strip-btn px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-all bg-indigo-600 text-white shadow-md border border-indigo-400 scale-105";
+                    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                } else if (idx < currentStep) {
+                    btn.className = "step-strip-btn px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all bg-slate-800 text-indigo-300 border border-indigo-500/30 hover:bg-slate-700";
+                } else {
+                    btn.className = "step-strip-btn px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800";
+                }
+            });
+        }
+
+        // Initialize Step Selector Strip
+        const stripContainer = document.getElementById('step-strip');
+        STEPS.forEach((stepItem, idx) => {
+            const btn = document.createElement('button');
+            const isStar = [3, 8, 9, 10, 11, 12, 13].includes(idx);
+            btn.innerText = `${isStar ? '★' : ''}${idx}`;
+            btn.title = `${idx}. ${stepItem.title}`;
+            btn.onclick = () => {
+                currentStep = idx;
+                render();
+            };
+            stripContainer.appendChild(btn);
+        });
+
+        // Prev / Next Navigation Handlers
+        document.getElementById('btn-prev').onclick = () => {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        };
+        document.getElementById('btn-next').onclick = () => {
+            if (currentStep < 21) {
+                currentStep++;
+                render();
+            }
+        };
+
+        // Keyboard Arrow Navigation
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' && currentStep > 0) {
+                currentStep--;
+                render();
+            } else if (e.key === 'ArrowRight' && currentStep < 21) {
+                currentStep++;
+                render();
+            }
+        });
+
+        // Initial render
+        updateToggleStyles();
+        render();
+
+    })();
+    </script>
+</body>
+</html>
